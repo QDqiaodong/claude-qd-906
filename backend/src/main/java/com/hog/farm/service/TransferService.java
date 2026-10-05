@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -137,8 +138,11 @@ public class TransferService {
             pig.setStatusDate(date);
             pigRepository.save(pig);
         }
-        houseService.changePenPigCount(target.getId(), pigs.size());
-        fromPenCounts.forEach((penId, count) -> houseService.changePenPigCount(penId, -count));
+        // 栏位存栏增减按栏位 id 升序落库，与栋舍行锁一起保持一致的加锁顺序
+        Map<Long, Integer> penDeltas = new TreeMap<>();
+        penDeltas.merge(target.getId(), pigs.size(), Integer::sum);
+        fromPenCounts.forEach((penId, count) -> penDeltas.merge(penId, -count, Integer::sum));
+        penDeltas.forEach(houseService::changePenPigCount);
 
         Map<Long, String> penCodes = penCodes();
         List<TransferVO> result = new ArrayList<>();

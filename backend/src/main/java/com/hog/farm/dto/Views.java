@@ -30,6 +30,10 @@ public final class Views {
         private String status;
         private String statusName;
         private String note;
+        /** 当前状态的原因说明（检修内容 / 停用缘由） */
+        private String statusReason;
+        /** 当前状态生效时间 */
+        private String statusChangedAt;
         /** 栋舍总容量 */
         private Integer capacity = 0;
         /** 栋舍总存栏 */
@@ -38,7 +42,89 @@ public final class Views {
         private Double usageRate = 0D;
         /** 停用栋舍不允许转入 */
         private Boolean disabled = Boolean.FALSE;
+        /** 非在用即冻结新增：检修 / 待清空 / 停用 */
+        private Boolean entryFrozen = Boolean.FALSE;
+        /** 受限原因（生效中的限制说明，含冻结新增口径） */
+        private String restrictionReason;
+        /** 待清空进度：还需迁出的猪只数；检修时为原地照护头数 */
+        private Integer remainingPigs = 0;
+        /** 未完操作（清洗消毒 / 维修）栏位数，停用前必须清零 */
+        private Integer unfinishedPens = 0;
+        /** 停用仍未生效的阻塞原因（待清空时展示） */
+        private List<String> blockers = new ArrayList<>();
+        /** 待处理异常：超容 / 位置不明 / 计数不符，恢复在用也不会被静默清除 */
+        private List<HouseAnomalyVO> anomalies = new ArrayList<>();
         private List<PenVO> pens = new ArrayList<>();
+    }
+
+    /** 栋舍待处理异常：恢复在用前重新评估，遗留问题不会被静默清除 */
+    @Data
+    public static class HouseAnomalyVO {
+        /** OVER_CAPACITY 超容 / LOCATION_UNKNOWN 位置不明 / COUNT_MISMATCH 计数不符 */
+        private String type;
+        private String typeName;
+        private String penCode;
+        private String detail;
+    }
+
+    /** 栋舍内一头待处置猪只（状态预览 / 确认清单用） */
+    @Data
+    public static class HousePigItemVO {
+        private Long id;
+        private String earTag;
+        private String penCode;
+        private String status;
+        private String statusName;
+    }
+
+    /** 状态切换前的影响预览：受影响栏位、猪只清单、阻塞原因、将生效的结果 */
+    @Data
+    public static class HouseStatusPreviewVO {
+        private Long houseId;
+        private String houseCode;
+        private String currentStatus;
+        private String currentStatusName;
+        private String targetStatus;
+        private String targetStatusName;
+        /** 确认后实际生效的状态（请求停用但未腾空时为 DRAINING） */
+        private String willBecome;
+        private String willBecomeName;
+        /** 本次确认将发生什么的通俗说明 */
+        private String decisionText;
+        /** 确认后是否冻结新增 */
+        private Boolean entryFrozenAfter = Boolean.FALSE;
+        private Integer totalPigs = 0;
+        private Integer unfinishedPens = 0;
+        /** 停用阻塞原因（有存栏 / 栏位未完操作） */
+        private List<String> blockers = new ArrayList<>();
+        /** 恢复在用时会保留的待处理异常 */
+        private List<HouseAnomalyVO> anomalies = new ArrayList<>();
+        /** 受影响栏位 */
+        private List<PenVO> pens = new ArrayList<>();
+        /** 受影响猪只清单 */
+        private List<HousePigItemVO> pigs = new ArrayList<>();
+    }
+
+    /** 状态切换结果：幂等重放 / 未腾空转待清空 / 恢复保留异常都在此表达 */
+    @Data
+    public static class HouseStatusResultVO {
+        private Long houseId;
+        private String houseCode;
+        private String requestedStatus;
+        private String requestedStatusName;
+        /** 实际生效状态 */
+        private String effectiveStatus;
+        private String effectiveStatusName;
+        /** 同一次切换重复提交：命中幂等键，未重复生效 */
+        private Boolean replayed = Boolean.FALSE;
+        /** 状态未发生变化（目标即现状 / 停用条件未满足仍停留待清空） */
+        private Boolean noop = Boolean.FALSE;
+        private String message;
+        private Integer remainingPigs = 0;
+        private Integer unfinishedPens = 0;
+        private List<String> blockers = new ArrayList<>();
+        private List<HouseAnomalyVO> anomalies = new ArrayList<>();
+        private HouseVO house;
     }
 
     /** 格子图里的一个栏位格子 */

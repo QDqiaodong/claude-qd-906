@@ -29,7 +29,9 @@ const house = {
   get: (id) => call(http.get(`/house/${id}`)),
   create: (data) => call(http.post('/house', data)),
   update: (id, data) => call(http.put(`/house/${id}`, data)),
-  status: (id, status) => call(http.post(`/house/${id}/status?status=${encodeURIComponent(status)}`)),
+  // 状态切换：先预览（受影响栏位 / 猪只清单 / 阻塞原因），再带幂等键确认
+  statusPreview: (id, target) => call(http.get(`/house/${id}/status-preview`, { params: { target } })),
+  status: (id, data) => call(http.post(`/house/${id}/status`, data)),
   remove: (id) => call(http.delete(`/house/${id}`)),
   createPen: (data) => call(http.post('/house/pen', data)),
   updatePen: (id, data) => call(http.put(`/house/pen/${id}`, data)),

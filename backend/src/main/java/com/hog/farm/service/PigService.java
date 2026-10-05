@@ -115,6 +115,8 @@ public class PigService {
             houseService.assertCanReceive(pen.getId(), 1);
             pig.setHouseId(pen.getHouseId());
         } else {
+            // 只指定栋舍的入栏入口同样受栋舍状态闸门约束（检修 / 待清空 / 停用一致拒绝）
+            houseService.assertHouseCanReceive(request.getHouseId());
             pig.setHouseId(request.getHouseId());
         }
         Pig saved = pigRepository.save(pig);

@@ -303,6 +303,45 @@ body {
 .pen-cell .pc-cap { font-size: 11px; color: var(--ink-dim); }
 .pen-cell.blocked { background: repeating-linear-gradient(45deg, #f6ece0, #f6ece0 6px, #f1e2cf 6px, #f1e2cf 12px); }
 
+/* ---------------- 栋舍状态链路（检修 / 待清空 / 停用） ---------------- */
+.house-card.restricted { background: #f7f1e6; border-style: dashed; }
+.tag.st { border-width: 1px; }
+.tag.st-ACTIVE { background: #eff8ea; color: #37651f; border-color: rgba(90, 168, 50, .35); }
+.tag.st-MAINTAIN { background: #fff3e0; color: #8f5a15; border-color: rgba(255, 143, 0, .4); }
+.tag.st-DRAINING { background: #e3f2fd; color: #1565c0; border-color: rgba(41, 182, 246, .45); }
+.tag.st-DISABLED { background: #f0f0f0; color: #616161; border-color: #d8d8d8; }
+.tag.frozen { background: #fff0eb; color: #8f2d15; border-color: rgba(226, 84, 44, .35); }
+
+.house-restrict {
+  margin-top: 8px; padding: 6px 9px; border-radius: 9px;
+  font-size: 11px; line-height: 1.6;
+  background: #fff0eb; color: #8f2d15; border: 1px dashed rgba(226, 84, 44, .35);
+}
+.house-restrict.st-MAINTAIN { background: #fff3e0; color: #8f5a15; border-color: rgba(255, 143, 0, .4); }
+.house-restrict.st-DRAINING { background: #e3f2fd; color: #0d47a1; border-color: rgba(41, 182, 246, .45); }
+.house-restrict .hr-time { margin-left: 6px; color: var(--ink-dim); }
+
+.drain-progress { margin-top: 8px; font-size: 11px; color: var(--ink-soft); }
+.drain-progress .dp-text { font-weight: 700; color: #0d47a1; }
+.drain-progress .dp-blocker { color: #8f2d15; padding: 1px 0; }
+
+.house-anomaly { margin-top: 8px; font-size: 11px; }
+.house-anomaly .ha-toggle { color: #b26a00; cursor: pointer; font-weight: 800; }
+.house-anomaly .ha-line { color: #8f5a15; padding: 2px 0 2px 6px; }
+
+/* 状态切换确认框 */
+.sp-flow { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.sp-arrow { font-weight: 900; color: var(--hog-primary); }
+.sp-decision { font-size: 12px; background: #fffaf0; border: 1px dashed var(--line-strong); border-radius: 10px; padding: 8px 10px; margin-bottom: 10px; line-height: 1.6; }
+.sp-block { border-radius: 10px; padding: 8px 10px; margin-bottom: 10px; font-size: 12px; line-height: 1.7; }
+.sp-block.blocked { background: #fff0eb; border: 1px solid rgba(226, 84, 44, .35); color: #8f2d15; }
+.sp-block.anomaly { background: #fff8e1; border: 1px solid rgba(255, 143, 0, .35); color: #8f5a15; }
+.sp-title { font-size: 12px; font-weight: 800; color: #4a3113; margin: 8px 0 6px; }
+.sp-block .sp-title { margin-top: 0; }
+.sp-pigs { display: flex; flex-wrap: wrap; gap: 6px; max-height: 120px; overflow: auto; }
+.sp-warn { color: #8f2d15; font-weight: 700; }
+.drawer-tip { font-size: 12px; background: #fff0eb; color: #8f2d15; border: 1px dashed rgba(226, 84, 44, .35); border-radius: 10px; padding: 8px 10px; margin-bottom: 12px; line-height: 1.6; }
+
 /* ---------------- 猪只列表 ---------------- */
 .pig-row {
   display: flex; align-items: center; gap: 10px;

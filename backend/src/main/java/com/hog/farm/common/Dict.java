@@ -39,10 +39,18 @@ public final class Dict {
             "ISOLATION", "#ef5350");
 
     // ---------------- 栋舍状态 ----------------
+    // 链路：在用 → 检修（立即生效、原地照护、冻结新增）
+    //       在用/检修 → 待清空（申请停用但仍有存栏或栏位有未完操作；冻结新增）
+    //       待清空 → 停用（全部猪只迁出且栏位无未完操作后才生效）
+    //       检修/待清空/停用 → 在用（恢复前重新评估，遗留异常保留为待处理）
     private static final Map<String, String> HOUSE_STATUS = Map.of(
             "ACTIVE", "在用",
             "MAINTAIN", "检修",
+            "DRAINING", "待清空",
             "DISABLED", "停用");
+
+    /** 冻结新增（不允许新猪进入）的栋舍状态：检修 / 待清空 / 停用 */
+    private static final Set<String> HOUSE_ENTRY_FROZEN = Set.of("MAINTAIN", "DRAINING", "DISABLED");
 
     // ---------------- 栏位状态 ----------------
     private static final Map<String, String> PEN_STATUS = Map.of(
@@ -215,6 +223,11 @@ public final class Dict {
 
     public static String houseStatusName(String status) {
         return name(HOUSE_STATUS, status);
+    }
+
+    /** 该状态是否冻结新增（检修 / 待清空 / 停用都不允许新猪进入） */
+    public static boolean isHouseEntryFrozen(String status) {
+        return status != null && HOUSE_ENTRY_FROZEN.contains(status);
     }
 
     public static boolean isValidPenStatus(String status) {

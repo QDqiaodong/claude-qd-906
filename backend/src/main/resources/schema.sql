@@ -25,12 +25,14 @@ DROP TABLE IF EXISTS feed_batch;
 DROP TABLE IF EXISTS batch;
 DROP TABLE IF EXISTS pig;
 DROP TABLE IF EXISTS pen;
+DROP TABLE IF EXISTS house_status_log;
 DROP TABLE IF EXISTS house;
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ---------------- 栋舍 ----------------
 -- 类型：GESTATION 配怀 / FARROWING 分娩 / NURSERY 保育 / FINISHING 育肥 / ISOLATION 隔离
--- 状态：ACTIVE 在用 / MAINTAIN 检修 / DISABLED 停用（停用后其下栏位不允许转入猪只）
+-- 状态链路：ACTIVE 在用 → MAINTAIN 检修（立即生效、原地照护、冻结新增）
+--          → DRAINING 待清空（申请停用但仍有存栏或栏位有未完操作）→ DISABLED 停用（腾空后生效）
 CREATE TABLE house (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     house_code VARCHAR(32) NOT NULL UNIQUE,
@@ -41,7 +43,28 @@ CREATE TABLE house (
     built_date DATE,
     pen_count INT DEFAULT 0,
     status VARCHAR(16),
+    status_reason VARCHAR(128),
+    status_changed_at DATETIME,
     note VARCHAR(128)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------- 栋舍状态切换台账 ----------------
+-- 每一次生效的状态切换落一行；request_no 为幂等键，同一次切换重复提交直接重放
+CREATE TABLE house_status_log (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    house_id BIGINT NOT NULL,
+    request_no VARCHAR(48) UNIQUE,
+    from_status VARCHAR(16),
+    requested_status VARCHAR(16),
+    to_status VARCHAR(16),
+    reason VARCHAR(128),
+    operator VARCHAR(32),
+    pig_count INT,
+    unfinished_pens INT,
+    anomaly_count INT,
+    detail VARCHAR(255),
+    created_at DATETIME,
+    KEY idx_house_status_house (house_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------- 栏位 ----------------
@@ -216,15 +239,15 @@ CREATE TABLE trace_target (
 
 -- ---------------- 种子数据 ----------------
 
-INSERT INTO house (house_code, house_name, house_type, area_sqm, keeper, built_date, pen_count, status, note) VALUES
-('HS-A01', '一号配怀舍', 'GESTATION', 860.00, '王建国', '2021-03-18', 2, 'ACTIVE', '限位栏饲养，配种后 30 天转入'),
-('HS-A02', '二号配怀舍', 'GESTATION', 780.00, '王建国', '2021-05-06', 2, 'ACTIVE', '后备母猪配种区'),
-('HS-B01', '分娩一舍',   'FARROWING', 920.00, '李秀兰', '2020-11-02', 2, 'ACTIVE', '产床 24 张，全进全出'),
-('HS-B02', '分娩二舍',   'FARROWING', 880.00, '李秀兰', '2021-08-14', 2, 'MAINTAIN', '产床加热线检修中'),
-('HS-C01', '保育一舍',   'NURSERY',   640.00, '张海涛', '2022-01-09', 2, 'ACTIVE', '断奶仔猪 21 日龄转入'),
-('HS-D01', '育肥一舍',   'FINISHING', 1200.00, '陈立军', '2020-06-21', 3, 'ACTIVE', '自由采食，自动清粪'),
-('HS-D02', '育肥二舍',   'FINISHING', 1150.00, '陈立军', '2021-02-27', 2, 'ACTIVE', '大栏饲养，风机水帘降温'),
-('HS-E01', '隔离观察舍', 'ISOLATION', 320.00, '赵德明', '2022-09-15', 1, 'DISABLED', '全场停用改造中，禁止转入');
+INSERT INTO house (house_code, house_name, house_type, area_sqm, keeper, built_date, pen_count, status, status_reason, status_changed_at, note) VALUES
+('HS-A01', '一号配怀舍', 'GESTATION', 860.00, '王建国', '2021-03-18', 2, 'ACTIVE', NULL, '2026-09-01 08:00:00', '限位栏饲养，配种后 30 天转入'),
+('HS-A02', '二号配怀舍', 'GESTATION', 780.00, '王建国', '2021-05-06', 2, 'ACTIVE', NULL, '2026-09-01 08:00:00', '后备母猪配种区'),
+('HS-B01', '分娩一舍',   'FARROWING', 920.00, '李秀兰', '2020-11-02', 2, 'ACTIVE', NULL, '2026-09-01 08:00:00', '产床 24 张，全进全出'),
+('HS-B02', '分娩二舍',   'FARROWING', 880.00, '李秀兰', '2021-08-14', 2, 'MAINTAIN', '产床加热线检修，存栏原地照护', '2026-10-02 09:30:00', '产床加热线检修中'),
+('HS-C01', '保育一舍',   'NURSERY',   640.00, '张海涛', '2022-01-09', 2, 'ACTIVE', NULL, '2026-09-01 08:00:00', '断奶仔猪 21 日龄转入'),
+('HS-D01', '育肥一舍',   'FINISHING', 1200.00, '陈立军', '2020-06-21', 3, 'ACTIVE', NULL, '2026-09-01 08:00:00', '自由采食，自动清粪'),
+('HS-D02', '育肥二舍',   'FINISHING', 1150.00, '陈立军', '2021-02-27', 2, 'ACTIVE', NULL, '2026-09-01 08:00:00', '大栏饲养，风机水帘降温'),
+('HS-E01', '隔离观察舍', 'ISOLATION', 320.00, '赵德明', '2022-09-15', 1, 'DISABLED', '全场停用改造，禁止转入', '2026-09-20 14:00:00', '全场停用改造中，禁止转入');
 
 INSERT INTO pen (house_id, pen_code, pen_name, capacity, pig_count, status, note) VALUES
 (1, 'HS-A01-01', 'A01 第 1 栏', 6, 3, 'NORMAL', '妊娠前期'),
@@ -242,7 +265,7 @@ INSERT INTO pen (house_id, pen_code, pen_name, capacity, pig_count, status, note
 (6, 'HS-D01-03', 'D01 第 3 栏', 30, 0, 'CLEANING', '出栏后冲洗'),
 (7, 'HS-D02-01', 'D02 第 1 栏', 30, 1, 'NORMAL', '育肥后期'),
 (7, 'HS-D02-02', 'D02 第 2 栏', 30, 0, 'NORMAL', '待装猪'),
-(8, 'HS-E01-01', 'E01 观察 1 栏', 8, 1, 'NORMAL', '疑似呼吸道症状观察');
+(8, 'HS-E01-01', 'E01 观察 1 栏', 8, 2, 'NORMAL', '疑似呼吸道症状观察；台账 2 头实际 1 头，遗留计数不符待处理');
 
 INSERT INTO pig (ear_tag, breed, gender, birth_date, source_type, pen_id, house_id, batch_id, status, weight_kg, status_date, note) VALUES
 ('ET-2601-0101', 'YORKSHIRE', 'FEMALE', '2026-01-12', 'SELF', 1, 1, 7, 'ON_FARM', 118.50, '2026-01-12', '一胎母猪，膘情中等'),
