@@ -20,6 +20,7 @@ const STATUSES = [
 
 const pigs = ref([])
 const pens = ref([])
+const houses = ref([])
 const statusFilter = ref('')
 const keyword = ref('')
 const selected = ref([])
@@ -63,6 +64,29 @@ const selectedPigs = computed(() => pigs.value.filter((p) => selected.value.incl
 async function load () {
   pigs.value = await api.pig.list()
   pens.value = await api.house.pens()
+  houses.value = await api.house.list()
+}
+
+// 栏位所在栋舍是否受限：检修 / 待清空 / 停用一致拒绝新建入栏、转入（后端强制，前端一致提示）
+const HOUSE_STATUS_NAMES = { ACTIVE: '在用', MAINTAIN: '检修', PENDING_DISABLE: '待清空', DISABLED: '停用' }
+function houseOfPen (pen) {
+  return houses.value.find((h) => h.id === pen?.houseId) || null
+}
+function penBlockedReason (pen) {
+  const h = houseOfPen(pen)
+  if (!h) return ''
+  if (h.status === 'MAINTAIN') return '栋舍检修中·冻结新增'
+  if (h.status === 'PENDING_DISABLE') return '栋舍待清空·只准迁出'
+  if (h.status === 'DISABLED') return '栋舍已停用'
+  if (pen.status === 'REPAIR') return '栏位维修中'
+  if (pen.status === 'CLEANING') return '栏位清洗消毒中'
+  return ''
+}
+function penLabel (pen) {
+  const h = houseOfPen(pen)
+  const houseTag = h ? `[${HOUSE_STATUS_NAMES[h.status] || h.status}] ` : ''
+  const blocked = penBlockedReason(pen)
+  return houseTag + pen.penCode + '（余 ' + Math.max(0, (pen.capacity || 0) - (pen.pigCount || 0)) + '）' + (blocked ? ' · ' + blocked : '')
 }
 
 function toggle (pig) {
@@ -94,6 +118,12 @@ async function runBatchStatus () {
 async function runBatchTransfer () {
   if (!batchPenId.value) {
     ElMessage.warning('请选择目标栏位')
+    return
+  }
+  const target = pens.value.find((p) => p.id === batchPenId.value)
+  const blockedReason = penBlockedReason(target)
+  if (blockedReason) {
+    ElMessage.error(`目标栏位不可转入：${blockedReason}`)
     return
   }
   try {
@@ -289,8 +319,14 @@ onMounted(load)
         <el-button type="primary" size="small" style="width: 100%" @click="runBatchStatus">执行批量状态变更</el-button>
 
         <div class="section-title" style="margin-top: 16px">批量转栏</div>
-        <el-select v-model="batchPenId" size="small" placeholder="选择目标栏位" style="width: 100%; margin-bottom: 8px">
-          <el-option v-for="pen in pens" :key="pen.id" :label="pen.penCode + '（余 ' + Math.max(0, (pen.capacity || 0) - (pen.pigCount || 0)) + '）'" :value="pen.id" />
+        <el-select v-model="batchPenId" size="small" placeholder="选择目标栏位（受限栏位不可选）" style="width: 100%; margin-bottom: 8px">
+          <el-option
+            v-for="pen in pens"
+            :key="pen.id"
+            :label="penLabel(pen)"
+            :value="pen.id"
+            :disabled="!!penBlockedReason(pen)"
+          />
         </el-select>
         <el-button size="small" style="width: 100%" @click="runBatchTransfer">批量搬移到该栏位</el-button>
         <el-button size="small" style="width: 100%; margin-top: 8px" @click="closeBatch">清空选择</el-button>
@@ -329,8 +365,14 @@ onMounted(load)
           </el-select>
         </el-form-item>
         <el-form-item label="所在栏位">
-          <el-select v-model="form.penId" clearable style="width: 100%">
-            <el-option v-for="pen in pens" :key="pen.id" :label="pen.penCode" :value="pen.id" />
+          <el-select v-model="form.penId" clearable style="width: 100%" placeholder="检修 / 待清空 / 停用栋舍的栏位不可入栏">
+            <el-option
+              v-for="pen in pens"
+              :key="pen.id"
+              :label="penLabel(pen)"
+              :value="pen.id"
+              :disabled="!!penBlockedReason(pen)"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="体重 kg"><el-input-number v-model="form.weightKg" :min="0" :precision="2" /></el-form-item>

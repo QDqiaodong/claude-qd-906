@@ -29,7 +29,12 @@ const house = {
   get: (id) => call(http.get(`/house/${id}`)),
   create: (data) => call(http.post('/house', data)),
   update: (id, data) => call(http.put(`/house/${id}`, data)),
-  status: (id, status) => call(http.post(`/house/${id}/status?status=${encodeURIComponent(status)}`)),
+  /** 状态切换预检：受影响栏位、猪只清单、阻塞原因 */
+  statusReview: (id, targetStatus) =>
+    call(http.get(`/house/${id}/status/review`, { params: { targetStatus } })),
+  /** 操作员确认后的状态切换（检修 / 待清空 / 停用 / 恢复在用） */
+  status: (id, data) => call(http.post(`/house/${id}/status`, data)),
+  statusLogs: (houseId) => call(http.get('/house/status-logs', { params: { houseId } })),
   remove: (id) => call(http.delete(`/house/${id}`)),
   createPen: (data) => call(http.post('/house/pen', data)),
   updatePen: (id, data) => call(http.put(`/house/pen/${id}`, data)),

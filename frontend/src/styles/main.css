@@ -281,7 +281,9 @@ body {
   padding: 12px 14px;
   box-shadow: 0 10px 22px rgba(170, 90, 0, 0.08);
 }
-.house-card.disabled { background: #f7f1e6; border-style: dashed; }
+.house-card.disabled { background: #f2f2f2; border-style: dashed; }
+.house-card.maintain { background: #eef6fc; border-color: #b7dcf5; }
+.house-card.pending { background: #fff6e8; border-color: #ffd591; }
 .house-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .house-code { font-size: 14px; font-weight: 800; color: #4a3113; }
 .house-meta { font-size: 11px; color: var(--ink-dim); margin-top: 3px; }
@@ -302,6 +304,50 @@ body {
 .pen-cell .pc-count { font-size: 17px; font-weight: 800; color: var(--hog-deep); margin-top: 2px; }
 .pen-cell .pc-cap { font-size: 11px; color: var(--ink-dim); }
 .pen-cell.blocked { background: repeating-linear-gradient(45deg, #f6ece0, #f6ece0 6px, #f1e2cf 6px, #f1e2cf 12px); }
+.pen-cell.pen-anomaly { border-color: #e5484d; box-shadow: 0 0 0 2px rgba(229, 72, 77, .15); }
+.pen-flag { color: #c62828; font-weight: 700; margin-left: 4px; }
+.count-warn { color: #c62828; font-weight: 700; }
+
+/* 栋舍状态色票 */
+.house-status-tag { color: #fff !important; }
+.house-status-tag.st-active { background: #66bb6a !important; }
+.house-status-tag.st-maintain { background: #42a5f5 !important; }
+.house-status-tag.st-pending { background: #ff8f00 !important; }
+.house-status-tag.st-disabled { background: #9e9e9e !important; }
+
+/* 受限原因与处置进度 */
+.restrict-banner {
+  display: flex; align-items: center; gap: 6px;
+  margin-top: 8px; padding: 6px 9px;
+  border-radius: 9px; font-size: 12px; line-height: 1.5;
+  background: #fff0eb; border: 1px solid rgba(226, 84, 44, .35); color: #8f2d15;
+}
+.rb-icon { font-size: 13px; }
+.dispose-progress {
+  margin-top: 8px; padding: 8px 9px;
+  border-radius: 9px; background: #fffaf0; border: 1px dashed #e6b873;
+}
+.dp-head { display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: #7a5417; margin-bottom: 5px; }
+.status-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+
+/* 待处理异常 */
+.anomaly-banner { margin-bottom: 12px; }
+.anomaly-line { font-size: 12px; line-height: 1.7; color: #8f2d15; }
+.anomaly-chip {
+  display: flex; align-items: center; gap: 6px;
+  margin-top: 6px; padding: 5px 8px;
+  border-radius: 8px; font-size: 11.5px; color: #8f2d15;
+  background: #fff0eb; border: 1px solid rgba(226, 84, 44, .25);
+}
+.anomaly-tag { background: #e5484d !important; white-space: nowrap; }
+
+/* 状态切换预检抽屉 */
+.review-rule { font-size: 12.5px; color: var(--ink-soft); line-height: 1.6; margin: 10px 0; }
+.review-line { font-size: 12.5px; line-height: 1.8; }
+.review-pens { display: flex; flex-wrap: wrap; gap: 6px; }
+.review-pen-tag { margin: 0; }
+.review-pigs { max-height: 260px; overflow-y: auto; }
+.log-line { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 13px; }
 
 /* ---------------- 猪只列表 ---------------- */
 .pig-row {

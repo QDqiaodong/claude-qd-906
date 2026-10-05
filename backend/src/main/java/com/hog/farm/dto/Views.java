@@ -29,16 +29,49 @@ public final class Views {
         private Integer penCount;
         private String status;
         private String statusName;
+        /** 状态色票（在用 / 检修 / 待清空 / 停用） */
+        private String statusColor;
         private String note;
         /** 栋舍总容量 */
         private Integer capacity = 0;
-        /** 栋舍总存栏 */
+        /** 栏位计数合计（pig_count 之和，可能与实际存栏不符） */
         private Integer pigCount = 0;
-        /** 栋舍存栏率 0~1 */
+        /** 实际在栋在栏的非终态猪只数（台账实测） */
+        private Integer actualPigCount = 0;
+        /** 栋舍存栏率 0~1（按实际存栏计） */
         private Double usageRate = 0D;
+        /** 受限（检修 / 待清空 / 停用）：拒绝一切新增入口 */
+        private Boolean restricted = Boolean.FALSE;
+        /** 检修中：存栏保留、原地照护，只冻结新增 */
+        private Boolean maintain = Boolean.FALSE;
+        /** 待清空：停用已受理，等待迁出与收尾 */
+        private Boolean pendingDisable = Boolean.FALSE;
         /** 停用栋舍不允许转入 */
         private Boolean disabled = Boolean.FALSE;
+        /** 待清空/检修中的存栏处置进度：已清空栏位数 / 总栏位数 */
+        private Integer clearedPenCount = 0;
+        /** 待迁出猪只数（待清空时有意义，等于实际存栏） */
+        private Integer pendingMoveCount = 0;
+        /** 受限原因（人类可读，如「检修中：冻结新增，原地照护」「停用腾空：仍有 3 头待迁出」） */
+        private String restrictReason;
+        /** 待处理异常（超容 / 位置不明 / 计数不符 / 栏位未完操作），恢复在用前必须保留并处置 */
+        private List<AnomalyVO> anomalies = new ArrayList<>();
         private List<PenVO> pens = new ArrayList<>();
+    }
+
+    /** 存栏处置异常：恢复在用前后都保留，直到台账实际修复才消失 */
+    @Data
+    public static class AnomalyVO {
+        /** OVER_CAPACITY / LOCATION_UNKNOWN / COUNT_MISMATCH / PEN_BUSY */
+        private String code;
+        private String codeName;
+        /** HOUSE / PEN / PIG 级别 */
+        private String level;
+        private Long penId;
+        private String penCode;
+        private Long pigId;
+        private String earTag;
+        private String message;
     }
 
     /** 格子图里的一个栏位格子 */
@@ -52,11 +85,79 @@ public final class Views {
         private String penName;
         private Integer capacity;
         private Integer pigCount;
+        /** 台账实测在栏非终态猪只数 */
+        private Integer actualPigCount;
         private Integer remaining;
         private Double usageRate;
         private String status;
         private String statusName;
+        /** 栏位是否有未完操作（清洗消毒 / 维修），停用生效前必须收尾 */
+        private Boolean busy = Boolean.FALSE;
+        /** 超容（实际存栏 > 容量） */
+        private Boolean overCapacity = Boolean.FALSE;
+        /** 计数不符（pig_count 与台账实测不一致） */
+        private Boolean countMismatch = Boolean.FALSE;
         private String note;
+    }
+
+    /** 状态切换预检中的一头受影响猪只 */
+    @Data
+    public static class AffectedPigVO {
+        private Long id;
+        private String earTag;
+        private String breedName;
+        private String statusName;
+        private Long penId;
+        private String penCode;
+        private BigDecimal weightKg;
+    }
+
+    /** 状态切换预检：操作员确认前必须看到受影响栏位、猪只清单和阻塞原因 */
+    @Data
+    public static class HouseStatusReviewVO {
+        private Long houseId;
+        private String houseCode;
+        private String houseName;
+        private String fromStatus;
+        private String fromStatusName;
+        private String targetStatus;
+        private String targetStatusName;
+        /** 处置模式：MAINTAIN_IN_PLACE 检修立即生效、原地照护；EMPTY_FIRST 先腾空再生效 */
+        private String dispositionMode;
+        private String dispositionModeName;
+        private String ruleText;
+        private Integer affectedPenCount = 0;
+        private Integer affectedPigCount = 0;
+        private Integer busyPenCount = 0;
+        private Integer anomalyCount = 0;
+        /** 待清空处置进度 */
+        private Integer clearedPenCount = 0;
+        private Integer totalPenCount = 0;
+        /** 是否可按目标状态生效（停用生效要求全空且无未完操作） */
+        private Boolean canApply = Boolean.FALSE;
+        /** 阻塞原因（不可生效时逐条给出） */
+        private List<String> blockers = new ArrayList<>();
+        /** 警告（不阻塞，但操作员须知悉；如恢复在用时仍有维修栏位 / 遗留异常） */
+        private List<String> warnings = new ArrayList<>();
+        private List<PenVO> affectedPens = new ArrayList<>();
+        private List<AffectedPigVO> affectedPigs = new ArrayList<>();
+        private List<AnomalyVO> anomalies = new ArrayList<>();
+    }
+
+    /** 栋舍状态切换日志行 */
+    @Data
+    public static class HouseStatusLogVO {
+        private Long id;
+        private Long houseId;
+        private String houseCode;
+        private String fromStatus;
+        private String fromStatusName;
+        private String toStatus;
+        private String toStatusName;
+        private Integer pigCount;
+        private String reason;
+        private String operator;
+        private String createdAt;
     }
 
     /** 猪只台账行 */

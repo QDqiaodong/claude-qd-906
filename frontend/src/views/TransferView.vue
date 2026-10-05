@@ -35,6 +35,26 @@ const sourcePen = computed(() => pens.value.find((p) => p.id === sourcePenId.val
 const targetPen = computed(() => pens.value.find((p) => p.id === targetPenId.value) || null)
 const remainOf = (pen) => Math.max(0, (pen?.capacity || 0) - (pen?.pigCount || 0))
 
+// 栏位 -> 所属栋舍状态：检修 / 待清空 / 停用 / 维修 / 清洗中的栏位不允许作为转入目标（服务端同样强制拦截）
+const houseStatusMap = computed(() => {
+  const map = {}
+  for (const h of houses.value) map[h.id] = h
+  return map
+})
+function penRestricted (pen) {
+  const h = houseStatusMap.value[pen?.houseId]
+  if (!h) return ''
+  if (h.status === 'MAINTAIN') return '栋舍检修中·冻结新增'
+  if (h.status === 'PENDING_DISABLE') return '栋舍待清空·只准迁出'
+  if (h.status === 'DISABLED') return '栋舍已停用'
+  if (pen?.status === 'REPAIR') return '栏位维修中'
+  if (pen?.status === 'CLEANING') return '栏位清洗消毒中'
+  return ''
+}
+function houseStatusNameOf (status) {
+  return { ACTIVE: '在用', MAINTAIN: '检修', PENDING_DISABLE: '待清空', DISABLED: '停用' }[status] || status
+}
+
 async function load () {
   houses.value = await api.transfer.houses()
   pens.value = await api.house.pens()
@@ -66,6 +86,8 @@ async function move () {
   if (!sourcePenId.value) return ElMessage.warning('请先选择源栏位')
   if (!targetPenId.value) return ElMessage.warning('请先选择目标栏位')
   if (!selected.value.length) return ElMessage.warning('请先勾选要搬移的猪只')
+  const blockedReason = penRestricted(targetPen.value)
+  if (blockedReason) return ElMessage.error(`目标栏位不可转入：${blockedReason}`)
   try {
     const list = await api.transfer.create({
       fromPenId: sourcePenId.value,
@@ -173,20 +195,29 @@ onMounted(load)
       <!-- 右：目标栏位 -->
       <div class="side-pane" :class="{ 'on-right': targetPenId }">
         <div class="section-title">目标栏位（{{ targetPen ? targetPen.penCode : '未选择' }}）</div>
+        <el-alert
+          type="info"
+          :closable="false"
+          title="检修 / 待清空 / 停用栋舍，以及维修、清洗消毒中的栏位一致拒绝转入（后端强制）"
+          style="margin-bottom: 8px"
+        />
         <div class="pen-grid">
           <div
             v-for="pen in targetPens"
             :key="pen.id"
             class="pen-cell"
-            :class="{ on: targetPenId === pen.id }"
-            @click="pickTargetPen(pen)"
+            :class="{ on: targetPenId === pen.id, blocked: !!penRestricted(pen) }"
+            @click="!penRestricted(pen) && pickTargetPen(pen)"
           >
             <div class="pc-name">{{ pen.penCode }}</div>
             <div class="pc-count">{{ remainOf(pen) }} <span class="pc-cap">/ 余位</span></div>
             <div class="load-bar" :class="{ full: remainOf(pen) === 0 }">
               <i :style="{ width: Math.round(((pen.pigCount || 0) * 100) / (pen.capacity || 1)) + '%' }"></i>
             </div>
-            <div class="pc-cap">存栏 {{ pen.pigCount }} / {{ pen.capacity }}</div>
+            <div class="pc-cap">
+              {{ houseStatusNameOf(houseStatusMap[pen.houseId]?.status) }} · 存栏 {{ pen.pigCount }} / {{ pen.capacity }}
+            </div>
+            <div v-if="penRestricted(pen)" class="pen-flag">{{ penRestricted(pen) }}</div>
           </div>
         </div>
       </div>

@@ -20,6 +20,9 @@ public interface PigRepository extends JpaRepository<Pig, Long> {
 
     List<Pig> findByPenIdOrderByEarTagAsc(Long penId);
 
+    /** 按冗余栋舍 id 查（存栏处置核对、位置不明异常审计用） */
+    List<Pig> findByHouseIdOrderByPenIdAscEarTagAsc(Long houseId);
+
     List<Pig> findByStatusOrderByEarTagAsc(String status);
 
     List<Pig> findByBatchIdOrderByEarTagAsc(Long batchId);

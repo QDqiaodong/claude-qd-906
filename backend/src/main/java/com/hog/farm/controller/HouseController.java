@@ -4,7 +4,10 @@ import com.hog.farm.common.ApiResponse;
 import com.hog.farm.domain.House;
 import com.hog.farm.domain.Pen;
 import com.hog.farm.dto.HouseRequest;
+import com.hog.farm.dto.HouseStatusRequest;
 import com.hog.farm.dto.PenRequest;
+import com.hog.farm.dto.Views.HouseStatusLogVO;
+import com.hog.farm.dto.Views.HouseStatusReviewVO;
 import com.hog.farm.dto.Views.HouseVO;
 import com.hog.farm.dto.Views.PenVO;
 import com.hog.farm.dto.Views.PigVO;
@@ -76,10 +79,27 @@ public class HouseController {
         return ApiResponse.success("栋舍已更新", service.update(id, request));
     }
 
-    /** 启用 / 停用 / 检修：停用后其下栏位不允许转入猪只 */
+    /**
+     * 状态切换预检：操作员确认前看到受影响栏位、猪只清单和阻塞原因。
+     * 检修立即生效、原地照护；停用先腾空（PENDING_DISABLE）再生效（DISABLED）。
+     */
+    @GetMapping("/{id}/status/review")
+    public ApiResponse<HouseStatusReviewVO> reviewStatus(@PathVariable Long id,
+                                                         @RequestParam String targetStatus) {
+        return ApiResponse.success(service.reviewStatus(id, targetStatus));
+    }
+
+    /** 操作员确认后的状态切换（带操作员与幂等 requestNo） */
     @PostMapping("/{id}/status")
-    public ApiResponse<House> changeStatus(@PathVariable Long id, @RequestParam String status) {
-        return ApiResponse.success("栋舍状态已更新", service.changeStatus(id, status));
+    public ApiResponse<HouseStatusReviewVO> changeStatus(@PathVariable Long id,
+                                                         @RequestBody HouseStatusRequest request) {
+        return ApiResponse.success("栋舍状态已更新", service.changeStatus(id, request));
+    }
+
+    /** 栋舍状态切换留痕（安置结论可追踪，同一次切换不会重复出现） */
+    @GetMapping("/status-logs")
+    public ApiResponse<List<HouseStatusLogVO>> statusLogs(@RequestParam(required = false) Long houseId) {
+        return ApiResponse.success(service.statusLogs(houseId));
     }
 
     @DeleteMapping("/{id}")

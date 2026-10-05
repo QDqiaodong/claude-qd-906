@@ -39,10 +39,26 @@ public final class Dict {
             "ISOLATION", "#ef5350");
 
     // ---------------- 栋舍状态 ----------------
+    // ACTIVE 在用 / MAINTAIN 检修（立即生效、原地照护）/ PENDING_DISABLE 待清空（先腾空再生效）/ DISABLED 停用
     private static final Map<String, String> HOUSE_STATUS = Map.of(
             "ACTIVE", "在用",
             "MAINTAIN", "检修",
+            "PENDING_DISABLE", "待清空",
             "DISABLED", "停用");
+
+    /** 待清空 / 停用色票（前端格子图用） */
+    public static final String HOUSE_STATUS_PENDING_COLOR = "#ff8f00";
+    public static final String HOUSE_STATUS_DISABLED_COLOR = "#9e9e9e";
+    public static final String HOUSE_STATUS_MAINTAIN_COLOR = "#42a5f5";
+    public static final String HOUSE_STATUS_ACTIVE_COLOR = "#66bb6a";
+
+    // ---------------- 存栏处置异常（恢复在用前重新评估，遗留项不得静默清除） ----------------
+    // OVER_CAPACITY 超容 / LOCATION_UNKNOWN 位置不明 / COUNT_MISMATCH 计数不符 / PEN_BUSY 栏位未完操作
+    private static final Map<String, String> HOUSE_ANOMALY = Map.of(
+            "OVER_CAPACITY", "超容",
+            "LOCATION_UNKNOWN", "位置不明",
+            "COUNT_MISMATCH", "计数不符",
+            "PEN_BUSY", "栏位未完操作");
 
     // ---------------- 栏位状态 ----------------
     private static final Map<String, String> PEN_STATUS = Map.of(
@@ -215,6 +231,27 @@ public final class Dict {
 
     public static String houseStatusName(String status) {
         return name(HOUSE_STATUS, status);
+    }
+
+    public static String houseStatusColor(String status) {
+        if (status == null) {
+            return "#90a4ae";
+        }
+        return switch (status) {
+            case "ACTIVE" -> HOUSE_STATUS_ACTIVE_COLOR;
+            case "MAINTAIN" -> HOUSE_STATUS_MAINTAIN_COLOR;
+            case "PENDING_DISABLE" -> HOUSE_STATUS_PENDING_COLOR;
+            case "DISABLED" -> HOUSE_STATUS_DISABLED_COLOR;
+            default -> "#90a4ae";
+        };
+    }
+
+    public static boolean isValidHouseAnomaly(String code) {
+        return code != null && HOUSE_ANOMALY.containsKey(code);
+    }
+
+    public static String houseAnomalyName(String code) {
+        return name(HOUSE_ANOMALY, code);
     }
 
     public static boolean isValidPenStatus(String status) {

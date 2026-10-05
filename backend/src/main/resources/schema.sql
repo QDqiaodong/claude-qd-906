@@ -25,12 +25,14 @@ DROP TABLE IF EXISTS feed_batch;
 DROP TABLE IF EXISTS batch;
 DROP TABLE IF EXISTS pig;
 DROP TABLE IF EXISTS pen;
+DROP TABLE IF EXISTS house_status_log;
 DROP TABLE IF EXISTS house;
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ---------------- 栋舍 ----------------
 -- 类型：GESTATION 配怀 / FARROWING 分娩 / NURSERY 保育 / FINISHING 育肥 / ISOLATION 隔离
--- 状态：ACTIVE 在用 / MAINTAIN 检修 / DISABLED 停用（停用后其下栏位不允许转入猪只）
+-- 状态：ACTIVE 在用 / MAINTAIN 检修（立即生效、原地照护，冻结新增）
+--       PENDING_DISABLE 待清空（停用申请已受理，先腾空、只准迁出）/ DISABLED 停用（腾空收尾后才生效）
 CREATE TABLE house (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     house_code VARCHAR(32) NOT NULL UNIQUE,
@@ -42,6 +44,22 @@ CREATE TABLE house (
     pen_count INT DEFAULT 0,
     status VARCHAR(16),
     note VARCHAR(128)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------- 栋舍状态切换日志 ----------------
+-- 每次生效的切换都留痕（安置结论可追踪）；request_key 唯一，同一次确认不能重复生效。
+CREATE TABLE house_status_log (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    house_id BIGINT NOT NULL,
+    house_code VARCHAR(32),
+    from_status VARCHAR(16),
+    to_status VARCHAR(16),
+    pig_count INT,
+    reason VARCHAR(255),
+    operator VARCHAR(32),
+    created_at DATETIME,
+    request_key VARCHAR(128) NOT NULL UNIQUE,
+    KEY idx_house_status_log (house_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------- 栏位 ----------------
@@ -224,7 +242,7 @@ INSERT INTO house (house_code, house_name, house_type, area_sqm, keeper, built_d
 ('HS-C01', '保育一舍',   'NURSERY',   640.00, '张海涛', '2022-01-09', 2, 'ACTIVE', '断奶仔猪 21 日龄转入'),
 ('HS-D01', '育肥一舍',   'FINISHING', 1200.00, '陈立军', '2020-06-21', 3, 'ACTIVE', '自由采食，自动清粪'),
 ('HS-D02', '育肥二舍',   'FINISHING', 1150.00, '陈立军', '2021-02-27', 2, 'ACTIVE', '大栏饲养，风机水帘降温'),
-('HS-E01', '隔离观察舍', 'ISOLATION', 320.00, '赵德明', '2022-09-15', 1, 'DISABLED', '全场停用改造中，禁止转入');
+('HS-E01', '隔离观察舍', 'ISOLATION', 320.00, '赵德明', '2022-09-15', 1, 'PENDING_DISABLE', '已申请停用、待清空：观察猪迁出后完成停用，期间禁止转入');
 
 INSERT INTO pen (house_id, pen_code, pen_name, capacity, pig_count, status, note) VALUES
 (1, 'HS-A01-01', 'A01 第 1 栏', 6, 3, 'NORMAL', '妊娠前期'),

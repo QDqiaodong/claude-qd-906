@@ -1,9 +1,11 @@
 package com.hog.farm.repository;
 
 import com.hog.farm.domain.Pen;
+import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -19,6 +21,11 @@ public interface PenRepository extends JpaRepository<Pen, Long> {
     List<Pen> findAllByOrderByPenCodeAsc();
 
     int countByHouseId(Long houseId);
+
+    /** 转入校验事务内对目标栏位加写锁：容量与栋舍状态在锁下复核，杜绝并发超容与状态穿越。 */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select p from Pen p where p.id = :id")
+    Optional<Pen> lockById(@Param("id") Long id);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("update Pen p set "
